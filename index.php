@@ -1,20 +1,26 @@
 <?php
 if (isset($_POST['prompt'])) {
+    $prompt = $_POST['prompt'];
     $seconds = 0;
     $retries = 0;
 
     do {
-        $data = call($_POST['prompt']);
+        $data = call($prompt);
         $seconds += $data['seconds'];
 
         if ($data['status'] == 200) {
             $images = json_decode($data['data'])->images;
 
             if (isset($_POST['save'])) {
-                array_map(function ($index, $image) {
-                    $path = __DIR__ . '/images/' . (string) time() . "($index).png";
-                    file_put_contents($path, base64_decode($image));
+                $images = array_map(function ($index, $image) use ($prompt) {
+                    $time = time();
+                    $name = strtolower(preg_replace('/\s+/', '_', $prompt)) . "_$time($index).png";
+                    $path = '/images/' . $name;
+                    file_put_contents(__DIR__ . $path, base64_decode($image));
+                    return $path;
                 }, array_keys($images), $images);
+            } else {
+                $images = array_map(fn ($image) => "data:image/png;base64,$image", $images);
             }
         } else {
             $seconds++;
@@ -64,7 +70,7 @@ function call($prompt)
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dall-E Retry<?= isset($_POST['prompt']) ? ' | ' . $_POST['prompt'] : '' ?></title>
+    <title>Dall-E Retry<?= isset($prompt) ? ' | ' . $prompt : '' ?></title>
     <style>
         body {
             max-width: 768px;
@@ -116,12 +122,12 @@ function call($prompt)
 <body>
     <form action="" method="post">
         <input type="text" name="prompt" id="prompt" placeholder="Prompt...">
-        <input type="checkbox" name="save" id="save" title="Save?">
+        <input type="checkbox" name="save" id="save" title="Save?" checked>
         <button type="submit" onclick="document.querySelector('h1').innerHTML = 'Searching, please wait...'">Search</button>
     </form>
 
 
-    <h1><?= isset($_POST['prompt']) ? $_POST['prompt'] : 'Search for something' ?></h1>
+    <h1><?= isset($prompt) ? $prompt : 'Search for something' ?></h1>
     <p class="seconds"><?= isset($seconds) ? "Executed in $seconds seconds with $retries retries" : '' ?></p>
 
     <div class="images">
@@ -129,7 +135,7 @@ function call($prompt)
         if (isset($images)) {
             foreach ($images as $key => $image) {
                 $image = trim($image);
-                echo "<img src='data:image/png;base64,$image' alt='Generated image $key' title='Generated image index $key'>";
+                echo "<img src='$image' alt='Generated image $key' title='Generated image index $key'>";
             }
         }
         ?>
