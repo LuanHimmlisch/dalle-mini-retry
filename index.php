@@ -9,12 +9,12 @@ if (isset($_POST['prompt'])) {
         $seconds += $data['seconds'];
 
         if ($data['status'] == 200) {
-            $images = json_decode($data['data'])->images;
+            $images = json_decode($data['data'])?->images ?? [];
 
             if (isset($_POST['save'])) {
                 $images = array_map(function ($index, $image) use ($prompt) {
                     $time = time();
-                    $name = strtolower(preg_replace('/\s+/', '_', $prompt)) . "_$time($index).png";
+                    $name = substr(preg_replace('/\s+/', '_', strtolower(preg_replace('/[^\w\s\-\.]/', ' ', $prompt))), 0, 200) . "_$time($index).png";
                     $path = '/images/' . $name;
                     file_put_contents(__DIR__ . $path, base64_decode($image));
                     return $path;
@@ -47,7 +47,8 @@ function call($prompt)
             "Host: bf.dallemini.ai",
             "Origin: https://hf.space",
             "Referrer: https://hf.space",
-        ]
+        ],
+        CURLOPT_TIMEOUT => 200
     ]);
 
     $data = curl_exec($curl);
